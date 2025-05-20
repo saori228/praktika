@@ -46,32 +46,40 @@ class EventController extends Controller
     /**
      * Сохранение нового мероприятия
      */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'event_date' => 'required|date',
-            'event_type_id' => 'required|exists:event_types,id',
-            'artist_id' => 'nullable|exists:artists,id',
-            'image_path' => 'nullable|string',
-        ]);
-        
-        $validated['user_id'] = Auth::id();
-        
-        $event = Event::create($validated);
-        
-        // Создаем зоны в зависимости от типа мероприятия
-        if ($request->event_type_id == 1) { // Концерт
-            $this->createConcertZones($event);
-        } elseif ($request->event_type_id == 2) { // Театр
-            $this->createTheaterZones($event);
-        } elseif ($request->event_type_id == 3) { // Кино
-            $this->createMovieZones($event);
-        }
-        
-        return redirect()->route('profile.organizer')->with('success', 'Мероприятие успешно создано');
+   public function store(Request $request)
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'required|string',
+        'event_date' => 'required|date',
+        'event_time' => 'required',
+        'event_type_id' => 'required|exists:event_types,id',
+        'image_path' => 'nullable|string',
+    ]);
+    
+    // Объединяем дату и время
+    $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
+    
+    $event = Event::create([
+        'name' => $validated['name'],
+        'description' => $validated['description'],
+        'event_date' => $eventDateTime,
+        'event_type_id' => $validated['event_type_id'],
+        'image_path' => $validated['image_path'],
+        'user_id' => Auth::id(),
+    ]);
+    
+    // Создаем зоны в зависимости от типа мероприятия
+    if ($request->event_type_id == 1) { // Концерт
+        $this->createConcertZones($event);
+    } elseif ($request->event_type_id == 2) { // Театр
+        $this->createTheaterZones($event);
+    } elseif ($request->event_type_id == 3) { // Кино
+        $this->createMovieZones($event);
     }
+    
+    return redirect()->route('profile.organizer')->with('success', 'Мероприятие успешно создано');
+}
     
     /**
      * Отображение мероприятия
@@ -110,42 +118,51 @@ class EventController extends Controller
      * Обновление мероприятия
      */
     public function update(Request $request, $id)
-    {
-        $event = Event::findOrFail($id);
-        
-        // Проверяем, что пользователь является владельцем мероприятия
-        if (Auth::id() !== $event->user_id && Auth::user()->email !== 'sasha123no@gmail.com') {
-            return redirect()->route('profile.organizer')->with('error', 'У вас нет прав на редактирование этого мероприятия');
-        }
-        
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'event_date' => 'required|date',
-            'event_type_id' => 'required|exists:event_types,id',
-            'artist_id' => 'nullable|exists:artists,id',
-            'image_path' => 'nullable|string',
-        ]);
-        
-        // Если тип мероприятия изменился, обновляем зоны
-        if ($event->event_type_id != $request->event_type_id) {
-            // Удаляем старые зоны и места
-            $event->venueZones()->delete();
-            
-            // Создаем новые зоны в зависимости от типа мероприятия
-            if ($request->event_type_id == 1) { // Концерт
-                $this->createConcertZones($event);
-            } elseif ($request->event_type_id == 2) { // Театр
-                $this->createTheaterZones($event);
-            } elseif ($request->event_type_id == 3) { // Кино
-                $this->createMovieZones($event);
-            }
-        }
-        
-        $event->update($validated);
-        
-        return redirect()->route('profile.organizer')->with('success', 'Мероприятие успешно обновлено');
+{
+    $event = Event::findOrFail($id);
+    
+    // Проверяем, что пользователь является владельцем мероприятия или админом
+    if (Auth::id() !== $event->user_id && Auth::user()->role !== 'admin' && Auth::user()->email !== 'sasha123no@gmail.com') {
+        return redirect()->route('profile.organizer')->with('error', 'У вас нет прав на редактирование этого мероприятия');
     }
+    
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'required|string',
+        'event_date' => 'required|date',
+        'event_time' => 'required',
+        'event_type_id' => 'required|exists:event_types,id',
+        'image_path' => 'nullable|string',
+    ]);
+    
+    // Объединяем дату и время
+    $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
+    
+    // Если тип мероприятия изменился, обновляем зоны
+    if ($event->event_type_id != $request->event_type_id) {
+        // Удаляем старые зоны и места
+        $event->venueZones()->delete();
+        
+        // Создаем новые зоны в зависимости от типа мероприятия
+        if ($request->event_type_id == 1) { // Концерт
+            $this->createConcertZones($event);
+        } elseif ($request->event_type_id == 2) { // Театр
+            $this->createTheaterZones($event);
+        } elseif ($request->event_type_id == 3) { // Кино
+            $this->createMovieZones($event);
+        }
+    }
+    
+    $event->update([
+        'name' => $validated['name'],
+        'description' => $validated['description'],
+        'event_date' => $eventDateTime,
+        'event_type_id' => $validated['event_type_id'],
+        'image_path' => $validated['image_path'],
+    ]);
+    
+    return redirect()->route('profile.organizer')->with('success', 'Мероприятие успешно обновлено');
+}
     
     /**
      * Удаление мероприятия
@@ -203,6 +220,9 @@ class EventController extends Controller
     /**
      * Сохранение бронирования
      */
+/**
+ * Сохранение бронирования
+ */
 public function bookingStore(Request $request, $id)
 {
     $event = Event::findOrFail($id);
@@ -220,7 +240,7 @@ public function bookingStore(Request $request, $id)
             'user_id' => Auth::id(),
             'event_id' => $event->id,
             'total_price' => $validated['total_price'],
-            'status' => 'confirmed' // Убедитесь, что значение в кавычках
+            'status' => 'confirmed'
         ]);
         
         // Создаем места для бронирования
@@ -228,7 +248,7 @@ public function bookingStore(Request $request, $id)
             BookingSeat::create([
                 'booking_id' => $booking->id,
                 'venue_zone_id' => $seat['zone_id'],
-                'seat_id' => $seat['seat_id'] ?? null,
+                'seat_id' => $seat['seat_id'],
                 'price' => $seat['price']
             ]);
         }

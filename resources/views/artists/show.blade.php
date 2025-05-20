@@ -10,15 +10,16 @@
         :event-date="'{{ $eventDate }}'"
         :event-id="{{ $eventId }}"
         :show-nav-links="true"
-        style="background-image: url('{{ $artist->header_image ?? '/images/headers/' . $artist->id . '.jpg' }}');"
+        style="background-image: url('/images/headers/{{ $artist->id }}.jpg');"
     ></header-component>
     
     <main class="flex-grow py-8">
         <div class="container mx-auto px-4">
-            <artist-detail 
-                :artist="{{ json_encode($artist) }}"
-                :event="{{ $event ? json_encode($event) : 'null' }}"
-            ></artist-detail>
+            <div class="artist-description mb-8">
+                <div class="md:w-2/3 mx-auto">
+                    <p class="text-gray-700">{{ $artist->description }}</p>
+                </div>
+            </div>
         </div>
     </main>
     

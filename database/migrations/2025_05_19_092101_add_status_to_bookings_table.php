@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('bookings', function (Blueprint $table) {
-            //
-        });
+        if (!Schema::hasColumn('bookings', 'status')) {
+            Schema::table('bookings', function (Blueprint $table) {
+                $table->string('status')->default('pending')->after('total_price');
+            });
+        }
     }
 
     /**
@@ -22,7 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
-            //
+            if (Schema::hasColumn('bookings', 'status')) {
+                $table->dropColumn('status');
+            }
         });
     }
 };

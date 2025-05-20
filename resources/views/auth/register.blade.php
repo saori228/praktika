@@ -61,6 +61,22 @@
                     </div>
                     
                     <div class="mb-4">
+                        <label for="role" class="block text-gray-700 font-medium mb-2">Роль</label>
+                        <select 
+                            id="role" 
+                            name="role" 
+                            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('role') border-red-500 @enderror"
+                            required
+                        >
+                            <option value="user" {{ old('role') == 'user' ? 'selected' : '' }}>Пользователь</option>
+                            <option value="organizer" {{ old('role') == 'organizer' ? 'selected' : '' }}>Организатор</option>
+                        </select>
+                        @error('role')
+                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    
+                    <div class="mb-4">
                         <label for="password" class="block text-gray-700 font-medium mb-2">Пароль</label>
                         <input 
                             type="password" 

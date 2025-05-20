@@ -38,16 +38,30 @@
                         >{{ old('description', $event->description) }}</textarea>
                     </div>
                     
-                    <div class="mb-4">
-                        <label for="event_date" class="block text-gray-700 font-medium mb-2">Дата проведения</label>
-                        <input 
-                            type="date" 
-                            id="event_date" 
-                            name="event_date" 
-                            value="{{ old('event_date', $event->event_date) }}" 
-                            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                        >
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="event_date" class="block text-gray-700 font-medium mb-2">Дата проведения</label>
+                            <input 
+                                type="date" 
+                                id="event_date" 
+                                name="event_date" 
+                                value="{{ old('event_date', date('Y-m-d', strtotime($event->event_date))) }}" 
+                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required
+                            >
+                        </div>
+                        
+                        <div>
+                            <label for="event_time" class="block text-gray-700 font-medium mb-2">Время проведения</label>
+                            <input 
+                                type="time" 
+                                id="event_time" 
+                                name="event_time" 
+                                value="{{ old('event_time', date('H:i', strtotime($event->event_date))) }}" 
+                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required
+                            >
+                        </div>
                     </div>
                     
                     <div class="mb-4">
@@ -70,22 +84,6 @@
                                     @else
                                         {{ $type->name }}
                                     @endif
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="artist_id" class="block text-gray-700 font-medium mb-2">Артист</label>
-                        <select 
-                            id="artist_id" 
-                            name="artist_id" 
-                            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">Выберите артиста</option>
-                            @foreach($artists as $artist)
-                                <option value="{{ $artist->id }}" {{ old('artist_id', $event->artist_id) == $artist->id ? 'selected' : '' }}>
-                                    {{ $artist->name }}
                                 </option>
                             @endforeach
                         </select>

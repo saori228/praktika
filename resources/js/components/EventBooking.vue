@@ -356,7 +356,7 @@ export default {
         console.error('Ошибка загрузки занятых мест:', error);
       }
     },
-    async bookTickets() {
+async bookTickets() {
       if (this.bookingInProgress || !this.canBook) return;
       
       this.bookingInProgress = true;
@@ -378,6 +378,7 @@ export default {
             for (let i = 0; i < this.quantity; i++) {
               seatsToBook.push({
                 zone_id: zone.id,
+                seat_id: `concert-${zone.id}-${Date.now()}-${i}`, // Генерируем уникальный ID для места
                 price: zone.price
               });
             }
@@ -452,8 +453,7 @@ export default {
       } finally {
         this.bookingInProgress = false;
       }
-    }
-  },
+    }},
   mounted() {
     // Проверяем, что у нас есть данные о мероприятии
     if (this.event && this.event.id) {

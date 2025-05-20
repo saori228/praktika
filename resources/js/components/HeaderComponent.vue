@@ -8,14 +8,14 @@
         
         <!-- Десктопное меню -->
         <div v-if="showNavLinks" class="nav-links hidden md:flex space-x-8">
-          <a href="/" class="nav-link">Главная</a>
-          <a href="/#artists" class="nav-link">Артисты</a>
-          <a href="/search" class="nav-link">Поиск</a>
-          <a href="/#events" class="nav-link">Мероприятия</a>
+          <a href="/" :class="navLinkClass">Главная</a>
+          <a href="/#artists" :class="navLinkClass">Артисты</a>
+          <a href="/search" :class="navLinkClass">Поиск</a>
+          <a href="/#events" :class="navLinkClass">Мероприятия</a>
         </div>
         
         <div class="flex items-center">
-          <a href="/profile" class="nav-link mr-4 md:mr-0">Личный кабинет</a>
+          <a href="/profile" :class="navLinkClass + ' mr-4 md:mr-0'">Личный кабинет</a>
           <!-- Мобильное меню -->
           <mobile-menu v-if="showNavLinks"></mobile-menu>
         </div>
@@ -37,8 +37,8 @@
           
           <div class="bg-yellow-300 skewed-box-left p-3 md:p-4">
             <div class="skewed-content-left">
-              <p class="text-white">{{ eventDate }}</p>
-              <p class="text-white">20:00</p>
+              <p class="text-black">{{ eventDate }}</p>
+              <p class="text-black">20:00</p>
             </div>
           </div>
           
@@ -96,6 +96,9 @@ export default {
         return 'bg-white py-4 md:py-6';
       }
     },
+    navLinkClass() {
+      return this.isArtistPage ? 'nav-link text-white' : 'nav-link text-black';
+    },
     bookingUrl() {
       return this.eventId ? `/events/${this.eventId}/booking` : '#';
     }
@@ -120,6 +123,22 @@ export default {
   position: relative;
 }
 
+.artist-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 0;
+}
+
+.artist-header .container {
+  position: relative;
+  z-index: 1;
+}
+
 @media (min-width: 768px) {
   .artist-header {
     min-height: 650px;
@@ -127,7 +146,6 @@ export default {
 }
 
 .nav-link {
-  color: #000;
   font-weight: 500;
   transition: color 0.3s;
 }
@@ -141,6 +159,7 @@ export default {
   transform: skew(-15deg);
   margin-bottom: 10px;
   min-width: 150px;
+  z-index: 2;
 }
 
 .skewed-content-right, .skewed-content-left {

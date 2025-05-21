@@ -28,3 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
+
+    // Регистрация middleware
+$app->middleware([
+    // ...
+]);
+
+$app->routeMiddleware([
+    // ...
+    'admin' => \App\Http\Middleware\AdminMiddleware::class,
+]);

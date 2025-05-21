@@ -1,5 +1,5 @@
 <template>
-  <header :class="headerClass">
+  <header :class="headerClass" :style="headerStyle">
     <div class="container mx-auto px-4 py-4">
       <div class="flex justify-between items-center">
         <div class="logo">
@@ -25,7 +25,8 @@
         <h1 class="text-3xl md:text-5xl font-bold">МУЛЬТИФОРМАТНАЯ ЛЕТНЯЯ ПЛОЩАДКА</h1>
       </div>
       
-      <div v-if="isArtistPage && artist" class="artist-info mt-8">
+      <!-- Информация для страницы артиста или мероприятия -->
+      <div v-if="(isArtistPage || isEventPage) && (artist || event)" class="artist-info mt-8">
         <div class="flex flex-col items-end space-y-4">
           <div class="bg-red-600 skewed-box-right p-3 md:p-4">
             <div class="skewed-content-right">
@@ -69,7 +70,15 @@ export default {
       type: Boolean,
       default: false
     },
+    isEventPage: {
+      type: Boolean,
+      default: false
+    },
     artist: {
+      type: Object,
+      default: null
+    },
+    event: {
       type: Object,
       default: null
     },
@@ -90,14 +99,22 @@ export default {
     headerClass() {
       if (this.isHomePage) {
         return 'gradient-header py-6 md:py-8';
-      } else if (this.isArtistPage && this.artist) {
+      } else if ((this.isArtistPage || this.isEventPage) && (this.artist || this.event)) {
         return `artist-header bg-cover bg-center py-8 md:py-12`;
       } else {
         return 'bg-white py-4 md:py-6';
       }
     },
+    headerStyle() {
+      if (this.isArtistPage && this.artist && this.artist.image_path) {
+        return { backgroundImage: `url(${this.artist.image_path})` };
+      } else if (this.isEventPage && this.event && this.event.image_path) {
+        return { backgroundImage: `url(${this.event.image_path})` };
+      }
+      return {};
+    },
     navLinkClass() {
-      return this.isArtistPage ? 'nav-link text-white' : 'nav-link text-black';
+      return (this.isArtistPage || this.isEventPage) ? 'nav-link text-white' : 'nav-link text-black';
     },
     bookingUrl() {
       return this.eventId ? `/events/${this.eventId}/booking` : '#';

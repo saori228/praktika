@@ -17,10 +17,10 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::check() && (Auth::user()->email === 'sasha123no@gmail.com' || Auth::user()->role === 'admin')) {
+        if (Auth::check() && Auth::user()->role === 'admin') {
             return $next($request);
         }
         
-        return redirect('/')->with('error', 'У вас нет прав доступа к этой странице');
+        return redirect('/')->with('error', 'У вас нет доступа к этой странице');
     }
 }

@@ -3,95 +3,63 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\User;
-use App\Models\Booking;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
+use App\Models\Event;
+use App\Models\Booking;
+use App\Models\Artist;
+use App\Models\User;
 
 class ProfileController extends Controller
 {
-    /**
-     * Отображение профиля пользователя
-     */
     public function index()
     {
         $user = Auth::user();
-        $bookings = Booking::with(['event', 'bookingSeats'])
-            ->where('user_id', $user->id)
+        
+        // Получаем бронирования пользователя
+        $bookings = Booking::where('user_id', $user->id)
+            ->with(['event', 'bookingSeats.venueZone'])
+            ->orderBy('created_at', 'desc')
             ->get();
         
-        return view('profile.index', [
-            'user' => $user,
-            'bookings' => $bookings,
-            'isOrganizer' => $user->role === 'organizer'
-        ]);
+        // Определяем, является ли пользователь организатором
+        $isOrganizer = $user->role === 'organizer';
+        
+        // Определяем, является ли пользователь администратором
+        $isAdmin = $user->role === 'admin';
+        
+        return view('profile.index', compact('user', 'bookings', 'isOrganizer', 'isAdmin'));
     }
     
-    /**
-     * Обновление данных пользователя
-     */
-    public function update(Request $request)
-    {
-        $user = Auth::user();
-        
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'surname' => 'sometimes|required|string|max:255',
-            'email' => [
-                'sometimes',
-                'required',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique('users')->ignore($user->id),
-                'regex:/(.*)gmail\.com$/i'
-            ],
-        ]);
-        
-        $user->update($validated);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Данные успешно обновлены'
-        ]);
-    }
-    
-    /**
-     * Обновление пароля пользователя
-     */
-    public function updatePassword(Request $request)
-    {
-        $validated = $request->validate([
-            'password' => 'required|string|min:8|max:30|regex:/[A-Z]/',
-        ]);
-        
-        $user = Auth::user();
-        $user->password = Hash::make($validated['password']);
-        $user->save();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Пароль успешно обновлен'
-        ]);
-    }
-    
-    /**
-     * Страница организатора
-     */
     public function organizer()
     {
         $user = Auth::user();
         
+        // Проверяем, что пользователь является организатором
         if ($user->role !== 'organizer') {
-            return redirect()->route('profile');
+            return redirect()->route('profile')->with('error', 'У вас нет доступа к этой странице');
         }
         
-        $events = $user->events()->with(['eventType', 'artist', 'venueZones'])->get();
+        // Получаем мероприятия организатора
+        $events = Event::where('user_id', $user->id)
+            ->with(['eventType', 'artist'])
+            ->orderBy('event_date', 'desc')
+            ->get();
         
-        return view('profile.organizer', [
-            'user' => $user,
-            'events' => $events
-        ]);
+        return view('profile.organizer', compact('events'));
+    }
+    
+    public function adminEvents()
+    {
+        // Проверяем, что пользователь является администратором
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('profile')->with('error', 'У вас нет доступа к этой странице');
+        }
+        
+        // Получаем все мероприятия со связанными данными
+        $events = Event::with(['eventType', 'artist', 'user'])
+            ->orderBy('event_date', 'desc')
+            ->get();
+        
+        return view('profile.admin_events', compact('events'));
     }
 }

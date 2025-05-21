@@ -82,16 +82,37 @@ class EventController extends Controller
 }
     
     /**
-     * Отображение мероприятия
-     */
-    public function show($id)
-    {
-        $event = Event::with(['eventType', 'artist'])->findOrFail($id);
+ * Отображение мероприятия
+ */
+public function show($id)
+{
+    try {
+        $event = Event::with(['eventType', 'artist', 'venueZones'])
+            ->findOrFail($id);
         
-        return view('events.show', [
-            'event' => $event
-        ]);
+        // Логируем для отладки
+        \Illuminate\Support\Facades\Log::info('Showing event: ' . $id);
+        \Illuminate\Support\Facades\Log::info('Event name: ' . $event->name);
+        
+        // Подготавливаем переменные для представления
+        $artist = $event->artist;
+        $eventDate = \Carbon\Carbon::parse($event->event_date)->format('d.m.Y H:i');
+        $eventId = $event->id;
+        
+        // Если у мероприятия нет артиста, создаем пустой объект
+        if (!$artist) {
+            $artist = new \stdClass();
+            $artist->name = $event->name;
+            $artist->description = $event->description;
+            $artist->image_path = $event->image_path;
+        }
+        
+        return view('events.show', compact('event', 'artist', 'eventDate', 'eventId'));
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Error showing event: ' . $e->getMessage());
+        return redirect()->route('home')->with('error', 'Мероприятие не найдено');
     }
+}
     
     /**
      * Отображение страницы редактирования мероприятия
@@ -114,72 +135,89 @@ class EventController extends Controller
         ]);
     }
     
-    /**
-     * Обновление мероприятия
-     */
-    public function update(Request $request, $id)
+/**
+ * Обновление мероприятия
+ */
+public function update(Request $request, $id)
 {
     $event = Event::findOrFail($id);
     
-    // Проверяем, что пользователь является владельцем мероприятия или админом
-    if (Auth::id() !== $event->user_id && Auth::user()->role !== 'admin' && Auth::user()->email !== 'sasha123no@gmail.com') {
-        return redirect()->route('profile.organizer')->with('error', 'У вас нет прав на редактирование этого мероприятия');
+    // Проверяем права доступа: пользователь должен быть либо владельцем мероприятия, либо администратором
+    if (Auth::id() !== $event->user_id && Auth::user()->role !== 'admin') {
+        return redirect()->route('profile')->with('error', 'У вас нет доступа к редактированию этого мероприятия');
     }
     
     $validated = $request->validate([
         'name' => 'required|string|max:255',
         'description' => 'required|string',
         'event_date' => 'required|date',
-        'event_time' => 'required',
         'event_type_id' => 'required|exists:event_types,id',
-        'image_path' => 'nullable|string',
+        'artist_id' => 'nullable|exists:artists,id',
+        'is_active' => 'boolean',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
     ]);
     
-    // Объединяем дату и время
-    $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
+    // Обработка изображения
+    if ($request->hasFile('image')) {
+        $imagePath = $request->file('image')->store('events', 'public');
+        $validated['image_path'] = 'storage/' . $imagePath;
+    }
     
-    // Если тип мероприятия изменился, обновляем зоны
-    if ($event->event_type_id != $request->event_type_id) {
-        // Удаляем старые зоны и места
-        $event->venueZones()->delete();
-        
-        // Создаем новые зоны в зависимости от типа мероприятия
-        if ($request->event_type_id == 1) { // Концерт
-            $this->createConcertZones($event);
-        } elseif ($request->event_type_id == 2) { // Театр
-            $this->createTheaterZones($event);
-        } elseif ($request->event_type_id == 3) { // Кино
-            $this->createMovieZones($event);
+    // Обновляем мероприятие
+    $event->update($validated);
+    
+    // Обновляем зоны мест, если они были отправлены
+    if ($request->has('zones')) {
+        foreach ($request->zones as $zoneId => $zoneData) {
+            $zone = $event->venueZones()->find($zoneId);
+            if ($zone) {
+                $zone->update([
+                    'name' => $zoneData['name'],
+                    'price' => $zoneData['price'],
+                    'capacity' => $zoneData['capacity'] ?? 0,
+                ]);
+            }
         }
     }
     
-    $event->update([
-        'name' => $validated['name'],
-        'description' => $validated['description'],
-        'event_date' => $eventDateTime,
-        'event_type_id' => $validated['event_type_id'],
-        'image_path' => $validated['image_path'],
-    ]);
+    // Добавляем новые зоны, если они были отправлены
+    if ($request->has('new_zones')) {
+        foreach ($request->new_zones as $newZone) {
+            if (!empty($newZone['name']) && !empty($newZone['price'])) {
+                $event->venueZones()->create([
+                    'name' => $newZone['name'],
+                    'price' => $newZone['price'],
+                    'capacity' => $newZone['capacity'] ?? 0,
+                ]);
+            }
+        }
+    }
     
-    return redirect()->route('profile.organizer')->with('success', 'Мероприятие успешно обновлено');
+    return redirect()->route('events.edit', $event->id)->with('success', 'Мероприятие успешно обновлено');
 }
+
+/**
+ * Удаление мероприятия
+ */
+public function destroy($id)
+{
+    $event = Event::findOrFail($id);
     
-    /**
-     * Удаление мероприятия
-     */
-    public function destroy($id)
-    {
-        $event = Event::findOrFail($id);
-        
-        // Проверяем, что пользователь является владельцем мероприятия
-        if (Auth::id() !== $event->user_id && Auth::user()->email !== 'sasha123no@gmail.com') {
-            return redirect()->route('profile.organizer')->with('error', 'У вас нет прав на удаление этого мероприятия');
-        }
-        
-        $event->delete();
-        
-        return redirect()->route('profile.organizer')->with('success', 'Мероприятие успешно удалено');
+    // Проверяем права доступа: пользователь должен быть либо владельцем мероприятия, либо администратором
+    if (Auth::id() !== $event->user_id && Auth::user()->role !== 'admin') {
+        return redirect()->route('profile')->with('error', 'У вас нет доступа к удалению этого мероприятия');
     }
+    
+    // Удаляем мероприятие
+    $event->delete();
+    
+    // Перенаправляем пользователя
+    if (Auth::user()->role === 'admin' && request()->header('referer') && strpos(request()->header('referer'), 'admin/events') !== false) {
+        return redirect()->route('admin.events')->with('success', 'Мероприятие успешно удалено');
+    }
+    
+    return redirect()->route('profile')->with('success', 'Мероприятие успешно удалено');
+}
     
     /**
   * Отображение страницы бронирования

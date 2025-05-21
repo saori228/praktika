@@ -38,11 +38,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     
-    // Организатор
-    Route::middleware('organizer')->group(function () {
-        Route::get('/profile/organizer', [ProfileController::class, 'organizer'])->name('profile.organizer');
-        
-        // Мероприятия
+// Маршруты для профиля
+Route::middleware(['auth'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
+    Route::get('/profile/organizer', [ProfileController::class, 'organizer'])->name('profile.organizer');
         Route::get('/events/create', [EventController::class, 'create'])->name('events.create');
         Route::post('/events', [EventController::class, 'store'])->name('events.store');
         Route::get('/events/{id}/edit', [EventController::class, 'edit'])->name('events.edit');
@@ -59,6 +58,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/events', [AdminController::class, 'events'])->name('admin.events');
         Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users');
         Route::delete('/admin/events/{id}', [AdminController::class, 'destroyEvent'])->name('admin.events.destroy');
+        
     });
 });
 
@@ -71,3 +71,26 @@ Route::get('/search', [SearchController::class, 'index'])->name('search');
 
 // API маршруты
 Route::get('/api/events/{id}/unavailable-seats', [EventController::class, 'getUnavailableSeats']);
+
+// Маршруты для администратора
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/events', [ProfileController::class, 'adminEvents'])->name('admin.events');
+});
+Route::get('/api/events/{id}', [SearchController::class, 'getEventInfo'])->name('api.events.info');
+// Добавьте эти маршруты, если их еще нет
+Route::get('/search', [App\Http\Controllers\SearchController::class, 'index'])->name('search');
+Route::post('/api/search', [App\Http\Controllers\SearchController::class, 'search'])->name('api.search');
+
+// Добавьте API маршруты для получения событий
+Route::get('/api/events', function() {
+    $events = App\Models\Event::with(['eventType', 'artist'])->get();
+    return response()->json(['events' => $events]);
+})->name('api.events');
+
+Route::get('/api/slider-events', function() {
+    $events = App\Models\Event::with(['eventType', 'artist'])
+        ->orderBy('event_date', 'desc')
+        ->take(5)
+        ->get();
+    return response()->json(['events' => $events]);
+})->name('api.slider-events');

@@ -3,10 +3,10 @@
 @section('title', 'Панель организатора')
 
 @section('content')
-<div id="app">
+<div class="flex flex-col min-h-screen">
     <header-component :show-nav-links="true"></header-component>
     
-    <main class="py-8">
+    <main class="flex-grow py-8">
         <div class="container mx-auto px-4">
             <h1 class="text-2xl font-bold mb-6">Панель организатора</h1>
             
@@ -50,6 +50,6 @@
         </div>
     </main>
     
-    <footer-component bg-color="bg-blue-200"></footer-component>
+    <footer-component bg-color="bg-white"></footer-component>
 </div>
 @endsection

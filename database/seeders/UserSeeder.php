@@ -41,3 +41,6 @@ class UserSeeder extends Seeder
         ]);
     }
 }
+
+// natali123@gmail.com
+// 7512UASFAgasu&

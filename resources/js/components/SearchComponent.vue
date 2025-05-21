@@ -14,6 +14,13 @@
       
       <div class="categories flex space-x-4 md:space-x-12 mb-6 md:mb-8 overflow-x-auto pb-2">
         <button 
+          @click="filterByType(null)" 
+          :class="{ 'font-bold': activeType === null }"
+          class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
+        >
+          Все
+        </button>
+        <button 
           @click="filterByType('concert')" 
           :class="{ 'font-bold': activeType === 'concert' }"
           class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
@@ -45,8 +52,8 @@
               :class="{'active': currentSlideIndex === index}"
               class="search-slider-item"
             >
-              <a :href="`/events/${slide.id}/booking`">
-                <img :src="slide.slider_image || slide.image_path || '/images/slider/slider-placeholder.jpg'" :alt="slide.name" class="w-full h-full object-cover">
+              <a :href="`/events/${slide.id}`">
+                <img :src="slide.image_path || '/images/slider/slider-placeholder.jpg'" :alt="slide.name" class="w-full h-full object-cover">
                 <div class="search-slider-info">
                   {{ slide.name }}
                 </div>
@@ -72,21 +79,23 @@
       
       <h2 class="text-xl md:text-2xl font-bold mb-4 md:mb-6">События от STADIUM</h2>
       
-      <div class="events-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+      <div v-if="filteredEvents.length > 0" class="events-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
         <a 
           v-for="event in filteredEvents" 
           :key="event.id" 
-          :href="`/events/${event.id}/booking`" 
+          :href="`/events/${event.id}`" 
           class="event-card bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
         >
           <img :src="event.image_path || '/images/events/event-placeholder.jpg'" :alt="event.name" class="w-full h-36 md:h-48 object-cover">
           <div class="p-3 md:p-4">
             <h3 class="text-base md:text-lg font-semibold">{{ event.name }}</h3>
+            <p class="text-sm text-gray-600">{{ formatDate(event.event_date) }}</p>
+            <p v-if="event.artist" class="text-sm text-gray-600">{{ event.artist.name }}</p>
           </div>
         </a>
       </div>
       
-      <div v-if="filteredEvents.length === 0" class="text-center py-8 md:py-12">
+      <div v-else class="text-center py-8 md:py-12">
         <p class="text-lg md:text-xl text-gray-500">Мероприятия не найдены</p>
       </div>
     </div>
@@ -103,16 +112,22 @@ export default {
     initialSliderEvents: {
       type: Array,
       default: () => []
+    },
+    eventTypes: {
+      type: Array,
+      default: () => []
     }
   },
   data() {
     return {
       searchQuery: '',
       activeType: null,
-      events: this.initialEvents,
-      sliderEvents: this.initialSliderEvents.length > 0 ? this.initialSliderEvents : this.initialEvents.slice(0, 4),
+      events: [],
+      sliderEvents: [],
       currentSlideIndex: 0,
-      sliderInterval: null
+      sliderInterval: null,
+      loading: false,
+      error: null
     }
   },
   computed: {
@@ -123,12 +138,14 @@ export default {
         const query = this.searchQuery.toLowerCase();
         result = result.filter(event => 
           event.name.toLowerCase().includes(query) || 
-          (event.artist && event.artist.name.toLowerCase().includes(query))
+          (event.artist && event.artist.name && event.artist.name.toLowerCase().includes(query))
         );
       }
       
       if (this.activeType) {
-        result = result.filter(event => event.event_type.name === this.activeType);
+        result = result.filter(event => 
+          event.event_type && event.event_type.name === this.activeType
+        );
       }
       
       return result;
@@ -140,24 +157,94 @@ export default {
       console.log('Searching for:', this.searchQuery);
     },
     filterByType(type) {
-      this.activeType = this.activeType === type ? null : type;
+      this.activeType = type;
     },
     nextSlide() {
+      if (this.sliderEvents.length === 0) return;
       this.currentSlideIndex = (this.currentSlideIndex + 1) % this.sliderEvents.length;
     },
     prevSlide() {
+      if (this.sliderEvents.length === 0) return;
       this.currentSlideIndex = (this.currentSlideIndex - 1 + this.sliderEvents.length) % this.sliderEvents.length;
     },
     startSliderInterval() {
-      this.sliderInterval = setInterval(() => {
-        this.nextSlide();
-      }, 10000);
+      if (this.sliderEvents.length > 0) {
+        this.sliderInterval = setInterval(() => {
+          this.nextSlide();
+        }, 10000);
+      }
+    },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    },
+    // Метод для инициализации данных
+    initializeData() {
+      // Проверяем, есть ли данные в props
+      if (this.initialEvents && this.initialEvents.length > 0) {
+        this.events = this.initialEvents;
+      } else {
+        // Если нет, загружаем данные с сервера
+        this.fetchEvents();
+      }
+      
+      if (this.initialSliderEvents && this.initialSliderEvents.length > 0) {
+        this.sliderEvents = this.initialSliderEvents;
+      } else if (this.initialEvents && this.initialEvents.length > 0) {
+        // Если нет слайдер-событий, но есть обычные события, используем их
+        this.sliderEvents = this.initialEvents.slice(0, 5);
+      } else {
+        // Если нет ни того, ни другого, загружаем данные с сервера
+        this.fetchSliderEvents();
+      }
+    },
+    // Метод для загрузки событий с сервера
+    async fetchEvents() {
+      this.loading = true;
+      this.error = null;
+      
+      try {
+        const response = await fetch('/api/events');
+        if (!response.ok) {
+          throw new Error('Ошибка при загрузке событий');
+        }
+        
+        const data = await response.json();
+        this.events = data.events || [];
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        this.error = error.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+    // Метод для загрузки слайдер-событий с сервера
+    async fetchSliderEvents() {
+      try {
+        const response = await fetch('/api/slider-events');
+        if (!response.ok) {
+          throw new Error('Ошибка при загрузке слайдер-событий');
+        }
+        
+        const data = await response.json();
+        this.sliderEvents = data.events || [];
+      } catch (error) {
+        console.error('Error fetching slider events:', error);
+        // Если не удалось загрузить слайдер-события, используем обычные события
+        if (this.events.length > 0) {
+          this.sliderEvents = this.events.slice(0, 5);
+        }
+      }
     }
   },
   mounted() {
-    if (this.sliderEvents.length > 0) {
-      this.startSliderInterval();
-    }
+    this.initializeData();
+    this.startSliderInterval();
+    
+    // Для отладки
+    console.log('Initial events:', this.initialEvents);
+    console.log('Initial slider events:', this.initialSliderEvents);
   },
   beforeUnmount() {
     if (this.sliderInterval) {

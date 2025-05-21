@@ -97,17 +97,11 @@
         <h2 class="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center">Панель администратора</h2>
         
         <div class="flex flex-col md:flex-row md:justify-center space-y-4 md:space-y-0 md:space-x-8">
-          <a href="/admin" class="action-button bg-white border-2 border-black rounded-full px-6 md:px-8 py-2 md:py-3 font-bold hover:bg-gray-100 transition-colors text-center">
-            Панель управления
-          </a>
           
           <a href="/admin/events" class="action-button bg-white border-2 border-black rounded-full px-6 md:px-8 py-2 md:py-3 font-bold hover:bg-gray-100 transition-colors text-center">
             Все мероприятия
           </a>
           
-          <a href="/admin/users" class="action-button bg-white border-2 border-black rounded-full px-6 md:px-8 py-2 md:py-3 font-bold hover:bg-gray-100 transition-colors text-center">
-            Пользователи
-          </a>
         </div>
       </div>
       

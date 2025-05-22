@@ -1,0 +1,9 @@
+cp .env.example .env
+composer install
+composer require doctrine/dbal
+npm install
+php artisan key:generate
+php artisan migrate:fresh
+php atisan db:seed
+npm run dev
+php artisan serve

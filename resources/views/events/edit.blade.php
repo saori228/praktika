@@ -89,16 +89,116 @@
                         </select>
                     </div>
                     
+                    <!-- Изображение для страницы поиска -->
                     <div class="mb-4">
-                        <label for="image_path" class="block text-gray-700 font-medium mb-2">Путь к изображению</label>
-                        <input 
-                            type="text" 
-                            id="image_path" 
-                            name="image_path" 
-                            value="{{ old('image_path', $event->image_path) }}" 
-                            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="/images/events/your-image.jpg"
-                        >
+                        <label for="image_path" class="block text-gray-700 font-medium mb-2">Изображение для страницы поиска</label>
+                        <div class="mb-2">
+                            <select 
+                                id="image_path" 
+                                name="image_path" 
+                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onchange="toggleCustomImagePath()"
+                            >
+                                <option value="">Выберите изображение</option>
+                                <option value="/images/events/tri-dnya-dozhdya.jpg" {{ old('image_path', $event->image_path) == '/images/events/tri-dnya-dozhdya.jpg' ? 'selected' : '' }}>
+                                    Три дня дождя
+                                </option>
+                                <option value="/images/events/og-buda.jpg" {{ old('image_path', $event->image_path) == '/images/events/og-buda.jpg' ? 'selected' : '' }}>
+                                    OG Buda
+                                </option>
+                                <option value="/images/events/sqwoz-bab.jpg" {{ old('image_path', $event->image_path) == '/images/events/sqwoz-bab.jpg' ? 'selected' : '' }}>
+                                    SQWOZ BAB
+                                </option>
+                                <option value="/images/events/husky.jpg" {{ old('image_path', $event->image_path) == '/images/events/husky.jpg' ? 'selected' : '' }}>
+                                    Хаски
+                                </option>
+                                <option value="/images/events/offset.jpg" {{ old('image_path', $event->image_path) == '/images/events/offset.jpg' ? 'selected' : '' }}>
+                                    OFFSET
+                                </option>
+                                <option value="/images/events/theater.jpg" {{ old('image_path', $event->image_path) == '/images/events/theater.jpg' ? 'selected' : '' }}>
+                                    Последняя сказка (Театр)
+                                </option>
+                                <option value="/images/events/movie.jpg" {{ old('image_path', $event->image_path) == '/images/events/movie.jpg' ? 'selected' : '' }}>
+                                    ОЧИ (Кино)
+                                </option>
+                                <option value="/images/events/concert-default.jpg" {{ old('image_path', $event->image_path) == '/images/events/concert-default.jpg' ? 'selected' : '' }}>
+                                    Концерт (по умолчанию)
+                                </option>
+                                <option value="/images/events/theater-default.jpg" {{ old('image_path', $event->image_path) == '/images/events/theater-default.jpg' ? 'selected' : '' }}>
+                                    Театр (по умолчанию)
+                                </option>
+                                <option value="/images/events/movie-default.jpg" {{ old('image_path', $event->image_path) == '/images/events/movie-default.jpg' ? 'selected' : '' }}>
+                                    Кино (по умолчанию)
+                                </option>
+                                <option value="custom">Свой путь к изображению</option>
+                            </select>
+                        </div>
+                        <div id="custom-image-path" style="display: none;">
+                            <input 
+                                type="text" 
+                                name="custom_image_path" 
+                                placeholder="Введите путь к изображению (например: /images/events/my-event.jpg)"
+                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value="{{ old('custom_image_path') }}"
+                            >
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">Изображение для отображения в списке событий на странице поиска</p>
+                    </div>
+                    
+                    <!-- Изображение для страницы показа события -->
+                    <div class="mb-4">
+                        <label for="display_image" class="block text-gray-700 font-medium mb-2">Изображение для страницы события</label>
+                        <div class="mb-2">
+                            <select 
+                                id="display_image" 
+                                name="display_image" 
+                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onchange="toggleCustomDisplayImage()"
+                            >
+                                <option value="">Выберите изображение</option>
+                                <option value="/images/events/show/tri-dnya-dozhdya-show.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/tri-dnya-dozhdya-show.jpg' ? 'selected' : '' }}>
+                                    Три дня дождя (показ)
+                                </option>
+                                <option value="/images/events/show/og-buda-show.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/og-buda-show.jpg' ? 'selected' : '' }}>
+                                    OG Buda (показ)
+                                </option>
+                                <option value="/images/events/show/sqwoz-bab-show.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/sqwoz-bab-show.jpg' ? 'selected' : '' }}>
+                                    SQWOZ BAB (показ)
+                                </option>
+                                <option value="/images/events/show/husky-show.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/husky-show.jpg' ? 'selected' : '' }}>
+                                    Хаски (показ)
+                                </option>
+                                <option value="/images/events/show/offset-show.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/offset-show.jpg' ? 'selected' : '' }}>
+                                    OFFSET (показ)
+                                </option>
+                                <option value="/images/events/show/theater-show.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/theater-show.jpg' ? 'selected' : '' }}>
+                                    Театр (показ)
+                                </option>
+                                <option value="/images/events/show/movie-show.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/movie-show.jpg' ? 'selected' : '' }}>
+                                    Кино (показ)
+                                </option>
+                                <option value="/images/events/show/concert-show-default.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/concert-show-default.jpg' ? 'selected' : '' }}>
+                                    Концерт (показ по умолчанию)
+                                </option>
+                                <option value="/images/events/show/theater-show-default.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/theater-show-default.jpg' ? 'selected' : '' }}>
+                                    Театр (показ по умолчанию)
+                                </option>
+                                <option value="/images/events/show/movie-show-default.jpg" {{ old('display_image', $event->display_image) == '/images/events/show/movie-show-default.jpg' ? 'selected' : '' }}>
+                                    Кино (показ по умолчанию)
+                                </option>
+                                <option value="custom">Свой путь к изображению</option>
+                            </select>
+                        </div>
+                        <div id="custom-display-image" style="display: none;">
+                            <input 
+                                type="text" 
+                                name="custom_display_image" 
+                                placeholder="Введите путь к изображению (например: /images/events/show/my-event-show.jpg)"
+                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value="{{ old('custom_display_image') }}"
+                            >
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">Изображение для отображения на странице события и бронирования</p>
                     </div>
                     
                     <div class="flex justify-end">
@@ -116,4 +216,34 @@
     
     <footer-component bg-color="bg-white"></footer-component>
 </div>
+
+<script>
+function toggleCustomImagePath() {
+    const select = document.getElementById('image_path');
+    const customDiv = document.getElementById('custom-image-path');
+    
+    if (select.value === 'custom') {
+        customDiv.style.display = 'block';
+    } else {
+        customDiv.style.display = 'none';
+    }
+}
+
+function toggleCustomDisplayImage() {
+    const select = document.getElementById('display_image');
+    const customDiv = document.getElementById('custom-display-image');
+    
+    if (select.value === 'custom') {
+        customDiv.style.display = 'block';
+    } else {
+        customDiv.style.display = 'none';
+    }
+}
+
+// Показать поля для кастомных изображений при загрузке страницы, если они выбраны
+document.addEventListener('DOMContentLoaded', function() {
+    toggleCustomImagePath();
+    toggleCustomDisplayImage();
+});
+</script>
 @endsection

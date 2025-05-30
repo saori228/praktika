@@ -55,17 +55,30 @@ class EventController extends Controller
         'event_time' => 'required',
         'event_type_id' => 'required|exists:event_types,id',
         'image_path' => 'nullable|string',
+        'custom_image_path' => 'nullable|string',
+        'display_image' => 'nullable|string',
+        'custom_display_image' => 'nullable|string',
     ]);
     
     // Объединяем дату и время
     $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
+    
+    // Определяем путь к изображению для поиска
+    $imagePath = $this->determineImagePath($request, 'image_path', 'custom_image_path');
+    if (!$imagePath) {
+        $imagePath = $this->getDefaultImagePath($validated['name'], $validated['event_type_id']);
+    }
+    
+    // Определяем путь к изображению для показа
+    $displayImage = $this->determineImagePath($request, 'display_image', 'custom_display_image');
     
     $event = Event::create([
         'name' => $validated['name'],
         'description' => $validated['description'],
         'event_date' => $eventDateTime,
         'event_type_id' => $validated['event_type_id'],
-        'image_path' => $validated['image_path'],
+        'image_path' => $imagePath,
+        'display_image' => $displayImage,
         'user_id' => Auth::id(),
     ]);
     
@@ -93,7 +106,7 @@ public function show($id)
         // Логируем для отладки
         \Illuminate\Support\Facades\Log::info('Showing event: ' . $id);
         \Illuminate\Support\Facades\Log::info('Event name: ' . $event->name);
-        
+   
         // Подготавливаем переменные для представления
         $artist = $event->artist;
         $eventDate = \Carbon\Carbon::parse($event->event_date)->format('d.m.Y H:i');
@@ -104,8 +117,14 @@ public function show($id)
             $artist = new \stdClass();
             $artist->name = $event->name;
             $artist->description = $event->description;
-            $artist->image_path = $event->image_path;
+            $artist->image_path = $this->getArtistImage($event);
+        } else {
+            // Устанавливаем правильное изображение для артиста
+            $artist->image_path = $this->getArtistImage($event);
         }
+        
+        // Устанавливаем правильное изображение для события
+        $event->display_image = $event->display_image ?: $this->getEventShowImage($event);
         
         return view('events.show', compact('event', 'artist', 'eventDate', 'eventId'));
     } catch (\Exception $e) {
@@ -124,7 +143,7 @@ public function show($id)
         $artists = Artist::all();
         
         // Проверяем, что пользователь является владельцем мероприятия
-        if (Auth::id() !== $event->user_id && Auth::user()->email !== 'sasha123no@gmail.com') {
+        if (Auth::id() !== $event->user_id && Auth::user()->role !== 'admin') {
             return redirect()->route('profile.organizer')->with('error', 'У вас нет прав на редактирование этого мероприятия');
         }
         
@@ -151,47 +170,35 @@ public function update(Request $request, $id)
         'name' => 'required|string|max:255',
         'description' => 'required|string',
         'event_date' => 'required|date',
+        'event_time' => 'required',
         'event_type_id' => 'required|exists:event_types,id',
-        'artist_id' => 'nullable|exists:artists,id',
-        'is_active' => 'boolean',
-        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        'image_path' => 'nullable|string',
+        'custom_image_path' => 'nullable|string',
+        'display_image' => 'nullable|string',
+        'custom_display_image' => 'nullable|string',
     ]);
     
-    // Обработка изображения
-    if ($request->hasFile('image')) {
-        $imagePath = $request->file('image')->store('events', 'public');
-        $validated['image_path'] = 'storage/' . $imagePath;
+    // Объединяем дату и время
+    $eventDateTime = $validated['event_date'] . ' ' . $validated['event_time'];
+    
+    // Определяем путь к изображению для поиска
+    $imagePath = $this->determineImagePath($request, 'image_path', 'custom_image_path');
+    if (!$imagePath) {
+        $imagePath = $this->getDefaultImagePath($validated['name'], $validated['event_type_id']);
     }
+    
+    // Определяем путь к изображению для показа
+    $displayImage = $this->determineImagePath($request, 'display_image', 'custom_display_image');
     
     // Обновляем мероприятие
-    $event->update($validated);
-    
-    // Обновляем зоны мест, если они были отправлены
-    if ($request->has('zones')) {
-        foreach ($request->zones as $zoneId => $zoneData) {
-            $zone = $event->venueZones()->find($zoneId);
-            if ($zone) {
-                $zone->update([
-                    'name' => $zoneData['name'],
-                    'price' => $zoneData['price'],
-                    'capacity' => $zoneData['capacity'] ?? 0,
-                ]);
-            }
-        }
-    }
-    
-    // Добавляем новые зоны, если они были отправлены
-    if ($request->has('new_zones')) {
-        foreach ($request->new_zones as $newZone) {
-            if (!empty($newZone['name']) && !empty($newZone['price'])) {
-                $event->venueZones()->create([
-                    'name' => $newZone['name'],
-                    'price' => $newZone['price'],
-                    'capacity' => $newZone['capacity'] ?? 0,
-                ]);
-            }
-        }
-    }
+    $event->update([
+        'name' => $validated['name'],
+        'description' => $validated['description'],
+        'event_date' => $eventDateTime,
+        'event_type_id' => $validated['event_type_id'],
+        'image_path' => $imagePath,
+        'display_image' => $displayImage,
+    ]);
     
     return redirect()->route('events.edit', $event->id)->with('success', 'Мероприятие успешно обновлено');
 }
@@ -231,6 +238,9 @@ public function destroy($id)
             // Получаем мероприятие с зонами и местами
             $event = Event::with(['eventType', 'artist', 'venueZones.seats'])->findOrFail($id);
             
+            // Устанавливаем правильное изображение для страницы бронирования
+            $event->display_image = $event->display_image ?: $this->getEventShowImage($event);
+            
             // Логируем успешное получение мероприятия
             Log::info('Мероприятие найдено', [
                 'event_id' => $id, 
@@ -258,9 +268,6 @@ public function destroy($id)
     /**
      * Сохранение бронирования
      */
-/**
- * Сохранение бронирования
- */
 public function bookingStore(Request $request, $id)
 {
     $event = Event::findOrFail($id);
@@ -290,7 +297,7 @@ public function bookingStore(Request $request, $id)
                 'price' => $seat['price']
             ]);
         }
-        
+ 
         DB::commit();
         
         return response()->json([
@@ -323,6 +330,113 @@ public function bookingStore(Request $request, $id)
         return response()->json([
             'seats' => $bookedSeats
         ]);
+    }
+    
+    /**
+     * Определение пути к изображению
+     */
+    private function determineImagePath($request, $selectField, $customField)
+    {
+        $selectedValue = $request->input($selectField);
+        
+        if ($selectedValue === 'custom') {
+            return $request->input($customField);
+        }
+        
+        return $selectedValue;
+    }
+    
+    /**
+     * Получение изображения по умолчанию для мероприятия
+     */
+    private function getDefaultImagePath($eventName, $eventTypeId)
+    {
+        // Определяем изображение на основе названия события
+        if (strpos($eventName, 'Три дня дождя') !== false) {
+            return '/images/events/tri-dnya-dozhdya.jpg';
+        } else if (strpos($eventName, 'OG Buda') !== false) {
+            return '/images/events/og-buda.jpg';
+        } else if (strpos($eventName, 'SQWOZ BAB') !== false) {
+            return '/images/events/sqwoz-bab.jpg';
+        } else if (strpos($eventName, 'Хаски') !== false) {
+            return '/images/events/husky.jpg';
+        } else if (strpos($eventName, 'OFFSET') !== false) {
+            return '/images/events/offset.jpg';
+        } else if (strpos($eventName, 'Последняя сказка') !== false) {
+            return '/images/events/theater.jpg';
+        } else if (strpos($eventName, 'ОЧИ') !== false) {
+            return '/images/events/movie.jpg';
+        }
+        
+        // Fallback изображения по типу события
+        switch ($eventTypeId) {
+            case 1: // Концерт
+                return '/images/events/concert-default.jpg';
+            case 2: // Театр
+                return '/images/events/theater-default.jpg';
+            case 3: // Кино
+                return '/images/events/movie-default.jpg';
+            default:
+                return '/images/events/event-default.jpg';
+        }
+    }
+    
+    /**
+     * Получение изображения для страницы показа события
+     */
+    private function getEventShowImage($event)
+    {
+        // Определяем изображения для страницы показа события
+        if (strpos($event->name, 'Три дня дождя') !== false) {
+            return '/images/events/show/tri-dnya-dozhdya-show.jpg';
+        } else if (strpos($event->name, 'OG Buda') !== false) {
+            return '/images/events/show/og-buda-show.jpg';
+        } else if (strpos($event->name, 'SQWOZ BAB') !== false) {
+            return '/images/events/show/sqwoz-bab-show.jpg';
+        } else if (strpos($event->name, 'Хаски') !== false) {
+            return '/images/events/show/husky-show.jpg';
+        } else if (strpos($event->name, 'OFFSET') !== false) {
+            return '/images/events/show/offset-show.jpg';
+        } else if (strpos($event->name, 'Последняя сказка') !== false) {
+            return '/images/events/show/theater-show.jpg';
+        } else if (strpos($event->name, 'ОЧИ') !== false) {
+            return '/images/events/show/movie-show.jpg';
+        }
+        
+        // Fallback изображения по типу события для страницы показа
+        if ($event->eventType) {
+            switch ($event->eventType->name) {
+                case 'concert':
+                    return '/images/events/show/concert-show-default.jpg';
+                case 'theater':
+                    return '/images/events/show/theater-show-default.jpg';
+                case 'movie':
+                    return '/images/events/show/movie-show-default.jpg';
+            }
+        }
+        
+        return '/images/events/show/event-show-default.jpg';
+    }
+    
+    /**
+     * Получение изображения артиста
+     */
+    private function getArtistImage($event)
+    {
+        // Определяем изображения артистов
+        if (strpos($event->name, 'Три дня дождя') !== false) {
+            return '/images/artists/tri-dnya-dozhdya.jpg';
+        } else if (strpos($event->name, 'OG Buda') !== false) {
+            return '/images/artists/og-buda.jpg';
+        } else if (strpos($event->name, 'SQWOZ BAB') !== false) {
+            return '/images/artists/sqwoz-bab.jpg';
+        } else if (strpos($event->name, 'Хаски') !== false) {
+            return '/images/artists/husky.jpg';
+        } else if (strpos($event->name, 'OFFSET') !== false) {
+            return '/images/artists/offset.jpg';
+        }
+        
+        return '/images/artists/artist-default.jpg';
     }
     
     /**

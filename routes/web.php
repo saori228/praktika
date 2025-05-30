@@ -87,10 +87,5 @@ Route::get('/api/events', function() {
     return response()->json(['events' => $events]);
 })->name('api.events');
 
-Route::get('/api/slider-events', function() {
-    $events = App\Models\Event::with(['eventType', 'artist'])
-        ->orderBy('event_date', 'desc')
-        ->take(5)
-        ->get();
-    return response()->json(['events' => $events]);
-})->name('api.slider-events');
+// Обновленный маршрут для получения событий слайдера
+Route::get('/api/slider-events', [SearchController::class, 'getSliderEvents'])->name('api.slider-events');

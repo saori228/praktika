@@ -5,8 +5,24 @@
       <div class="md:hidden">
         <h2 class="text-2xl font-bold text-center mb-8">Карта мероприятий</h2>
         <div class="grid grid-cols-2 gap-6">
-          <div v-for="(event, index) in events" :key="index" class="event-card">
-            <img :src="event.image_path || '/images/events/event-placeholder.jpg'" :alt="event.name" class="rounded-lg w-full h-48 object-cover">
+          <div class="map-card  rounded-lg overflow-hidden shadow-lg p-4">
+            <h3 class="text-lg font-semibold mb-4 text-center">Концерты</h3>
+            <img src="/images/map/concerts-map.jpg" alt="Карта концертов" class="w-full h-32 object-cover rounded-lg">
+          </div>
+          
+          <div class="map-card rounded-lg overflow-hidden shadow-lg p-4">
+            <h3 class="text-lg font-semibold mb-4 text-center">Театры</h3>
+            <img src="/images/map/theaters-map.jpg" alt="Карта театров" class="w-full h-32 object-cover rounded-lg">
+          </div>
+          
+          <div class="map-card  rounded-lg overflow-hidden shadow-lg p-4">
+            <h3 class="text-lg font-semibold mb-4 text-center">Кинотеатры</h3>
+            <img src="/images/map/cinemas-map.jpg" alt="Карта кинотеатров" class="w-full h-32 object-cover rounded-lg">
+          </div>
+          
+          <div class="map-card  rounded-lg overflow-hidden shadow-lg p-4">
+            <h3 class="text-lg font-semibold mb-4 text-center">Выставки</h3>
+            <img src="/images/map/exhibitions-map.jpg" alt="Карта выставок" class="w-full h-32 object-cover rounded-lg">
           </div>
         </div>
       </div>
@@ -15,8 +31,24 @@
       <div class="hidden md:block">
         <h2 class="text-4xl font-bold text-center mb-10">Карта мероприятий</h2>
         <div class="grid grid-cols-4 gap-8">
-          <div v-for="(event, index) in events" :key="index" class="event-card">
-            <img :src="event.image_path || '/images/events/event-placeholder.jpg'" :alt="event.name" class="rounded-lg w-full h-64 object-cover">
+          <div class="map-card  rounded-lg overflow-hidden shadow-lg p-4">
+            <h3 class="text-lg font-semibold mb-4 text-center">Концерты</h3>
+            <img src="/images/map/concerts-map.jpg" alt="Карта концертов" class="w-full h-48 object-cover rounded-lg">
+          </div>
+          
+          <div class="map-card  rounded-lg overflow-hidden shadow-lg p-4">
+            <h3 class="text-lg font-semibold mb-4 text-center">Театры</h3>
+            <img src="/images/map/theaters-map.jpg" alt="Карта театров" class="w-full h-48 object-cover rounded-lg">
+          </div>
+          
+          <div class="map-card rounded-lg overflow-hidden shadow-lg p-4">
+            <h3 class="text-lg font-semibold mb-4 text-center">Кинотеатры</h3>
+            <img src="/images/map/cinemas-map.jpg" alt="Карта кинотеатров" class="w-full h-48 object-cover rounded-lg">
+          </div>
+          
+          <div class="map-card rounded-lg overflow-hidden shadow-lg p-4">
+            <h3 class="text-lg font-semibold mb-4 text-center">Выставки</h3>
+            <img src="/images/map/exhibitions-map.jpg" alt="Карта выставок" class="w-full h-48 object-cover rounded-lg">
           </div>
         </div>
       </div>
@@ -29,23 +61,18 @@ export default {
   props: {
     events: {
       type: Array,
-      default: () => [
-        { name: 'Event 1', image_path: '/images/events/event-placeholder.jpg' },
-        { name: 'Event 2', image_path: '/images/events/event-placeholder.jpg' },
-        { name: 'Event 3', image_path: '/images/events/event-placeholder.jpg' },
-        { name: 'Event 4', image_path: '/images/events/event-placeholder.jpg' }
-      ]
+      default: () => []
     }
   }
 }
 </script>
 
 <style scoped>
-.event-card {
+.map-card {
   transition: transform 0.3s;
 }
 
-.event-card:hover {
-  transform: scale(1.05);
+.map-card:hover {
+  transform: translateY(-5px);
 }
 </style>

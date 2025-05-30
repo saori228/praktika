@@ -16,14 +16,28 @@ class SearchController extends Controller
             // Получаем все события для страницы поиска
             $events = Event::with(['eventType', 'artist'])->get();
             
-            // Получаем события для слайдера (например, последние 5)
-            $sliderEvents = Event::with(['eventType', 'artist'])
-                ->orderBy('event_date', 'desc')
-                ->take(5)
-                ->get();
+            // Получаем события для слайдера по их точным названиям
+            $sliderEvents = collect();
+            
+            // Определяем названия событий, которые должны быть в слайдере
+            $eventNames = ['OFFSET', 'ОЧИ', 'Последняя сказка', 'Хаски'];
+            
+            // Ищем события по названиям и добавляем их в коллекцию в нужном порядке
+            foreach ($eventNames as $name) {
+                $event = Event::with(['eventType', 'artist'])
+                    ->where('name', 'like', "%{$name}%")
+                    ->first();
+                
+                if ($event) {
+                    $sliderEvents->push($event);
+                }
+            }
             
             // Получаем все типы мероприятий
             $eventTypes = EventType::all();
+            
+            // Для отладки выведем ID событий в слайдере
+            Log::info('Slider events:', $sliderEvents->pluck('id', 'name')->toArray());
             
             return view('search', compact('events', 'sliderEvents', 'eventTypes'));
         } catch (\Exception $e) {
@@ -64,6 +78,58 @@ class SearchController extends Controller
             Log::error('Error in search API: ' . $e->getMessage());
             return response()->json([
                 'error' => 'Произошла ошибка при поиске',
+                'events' => []
+            ], 500);
+        }
+    }
+    
+    // Метод для получения информации о конкретном событии
+    public function getEventInfo($id)
+    {
+        try {
+            $event = Event::with(['eventType', 'artist'])->findOrFail($id);
+            return response()->json([
+                'event' => $event
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting event info: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Событие не найдено',
+                'event' => null
+            ], 404);
+        }
+    }
+    
+    // Метод для API слайдера
+    public function getSliderEvents()
+    {
+        try {
+            $sliderEvents = collect();
+            
+            // Определяем названия событий, которые должны быть в слайдере
+            $eventNames = ['OFFSET', 'ОЧИ', 'Последняя сказка', 'Хаски'];
+            
+            // Ищем события по названиям и добавляем их в коллекцию в нужном порядке
+            foreach ($eventNames as $name) {
+                $event = Event::with(['eventType', 'artist'])
+                    ->where('name', 'like', "%{$name}%")
+                    ->first();
+                
+                if ($event) {
+                    $sliderEvents->push($event);
+                }
+            }
+            
+            // Для отладки выведем ID событий в слайдере
+            Log::info('API Slider events:', $sliderEvents->pluck('id', 'name')->toArray());
+            
+            return response()->json([
+                'events' => $sliderEvents
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in slider events API: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Произошла ошибка при получении событий для слайдера',
                 'events' => []
             ], 500);
         }

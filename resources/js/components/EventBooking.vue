@@ -3,7 +3,7 @@
     <div class="event-info mb-8 md:mb-12 bg-white p-6 rounded-lg shadow">
       <div class="flex flex-col md:flex-row">
         <div class="event-image w-full md:w-1/3 mb-4 md:mb-0">
-          <img :src="event.image_path || '/images/events/event-placeholder.jpg'" :alt="event.name" class="rounded-lg w-full h-48 md:h-64 object-cover">
+          <img :src="event.display_image || event.image_path || '/images/events/event-default.jpg'" :alt="event.name" class="rounded-lg w-full h-48 md:h-64 object-cover">
         </div>
         
         <div class="event-details w-full md:w-2/3 md:pl-8">
@@ -14,6 +14,7 @@
       </div>
     </div>
     
+    <!-- Остальной код компонента остается без изменений -->
     <div class="venue-layout mb-6 md:mb-8">
       <div class="bg-white p-4 md:p-6 rounded-lg shadow">
         <h2 class="text-xl font-bold mb-4">Выбор мест</h2>
@@ -231,7 +232,7 @@ export default {
       bookingInProgress: false,
       quantity: 1,
       currentFloor: 1,
-      unavailableSeats: [] // Здесь будут храниться уже забронированные места
+      unavailableSeats: []
     }
   },
   computed: {
@@ -262,7 +263,6 @@ export default {
       if (!this.event.event_type) return price;
       
       if (this.event.event_type.name === 'concert') {
-        // Для концертов цена зависит от выбранной зоны и количества билетов
         if (this.selectedZone) {
           const zone = this.event.venue_zones.find(z => z.id === this.selectedZone);
           if (zone) {
@@ -270,21 +270,19 @@ export default {
           }
         }
       } else if (this.event.event_type.name === 'movie') {
-        // Для кино цена зависит от выбранных мест
         this.selectedSeats.forEach(seatId => {
           if (seatId.startsWith('vip')) {
-            price += 450; // VIP места
+            price += 450;
           } else {
-            price += 250; // Обычные места
+            price += 250;
           }
         });
       } else if (this.event.event_type.name === 'theater') {
-        // Для театра цена зависит от выбранных мест
         this.selectedSeats.forEach(seatId => {
           if (seatId.startsWith('balcony')) {
-            price += 500; // Места на втором этаже
+            price += 500;
           } else {
-            price += 250; // Обычные места
+            price += 250;
           }
         });
       }
@@ -310,7 +308,6 @@ export default {
       }
     },
     toggleSeat(seatId) {
-      // Проверяем, доступно ли место
       if (this.isSeatUnavailable(seatId)) return;
       
       const index = this.selectedSeats.indexOf(seatId);
@@ -356,7 +353,7 @@ export default {
         console.error('Ошибка загрузки занятых мест:', error);
       }
     },
-async bookTickets() {
+    async bookTickets() {
       if (this.bookingInProgress || !this.canBook) return;
       
       this.bookingInProgress = true;
@@ -371,20 +368,17 @@ async bookTickets() {
             return;
           }
           
-          // Для концертов бронируем несколько мест в выбранной зоне
           const zone = this.event.venue_zones.find(z => z.id === this.selectedZone);
           if (zone) {
-            // Создаем массив с указанным количеством мест
             for (let i = 0; i < this.quantity; i++) {
               seatsToBook.push({
                 zone_id: zone.id,
-                seat_id: `concert-${zone.id}-${Date.now()}-${i}`, // Генерируем уникальный ID для места
+                seat_id: `concert-${zone.id}-${Date.now()}-${i}`,
                 price: zone.price
               });
             }
           }
         } else {
-          // Для кино и театра бронируем выбранные места
           if (this.selectedSeats.length === 0) {
             alert('Пожалуйста, выберите места');
             this.bookingInProgress = false;
@@ -423,10 +417,8 @@ async bookTickets() {
           });
         }
         
-        // Получаем CSRF токен
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         
-        // Отправляем запрос на бронирование
         const response = await fetch(`/events/${this.event.id}/booking`, {
           method: 'POST',
           headers: {
@@ -453,11 +445,10 @@ async bookTickets() {
       } finally {
         this.bookingInProgress = false;
       }
-    }},
+    }
+  },
   mounted() {
-    // Проверяем, что у нас есть данные о мероприятии
     if (this.event && this.event.id) {
-      // Загружаем информацию о недоступных местах
       this.loadUnavailableSeats();
     } else {
       console.error('Ошибка: данные о мероприятии отсутствуют');
@@ -496,7 +487,7 @@ async bookTickets() {
   left: 50%;
   transform: translateX(-50%);
   width: 200px;
-  height: 300px; /* Уменьшили высоту */
+  height: 300px;
   background-color: #e0e0e0;
   display: flex;
   align-items: center;
@@ -509,9 +500,9 @@ async bookTickets() {
 .premium-block {
   position: absolute;
   top: 105px;
-  right: 150px; /* Ближе к центру */
-  width: 180px; /* Уменьшили ширину */
-  height: 300px; /* Уменьшили высоту */
+  right: 250px;
+  width: 180px;
+  height: 300px;
   background-color: #e0e0e0;
   display: flex;
   align-items: center;
@@ -524,9 +515,9 @@ async bookTickets() {
 .vip-block {
   position: absolute;
   top: 105px;
-  left: 150px; /* Ближе к центру */
-  width: 180px; /* Уменьшили ширину */
-  height: 200px; /* Уменьшили высоту */
+  left: 100px;
+  width: 320px;
+  height: 300px;
   background-color: #e0e0e0;
   display: flex;
   align-items: center;
@@ -554,7 +545,6 @@ async bookTickets() {
   background-color: #b3e0ff;
 }
 
-/* Остальные стили остаются без изменений */
 .movie-seats {
   position: absolute;
   top: 120px;
@@ -639,7 +629,6 @@ async bookTickets() {
   cursor: not-allowed;
 }
 
-/* Стили для театра */
 .theater-seats {
   position: absolute;
   top: 120px;

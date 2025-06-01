@@ -7,6 +7,7 @@ use App\Models\Artist;
 use App\Models\EventType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class SearchController extends Controller
 {
@@ -51,9 +52,12 @@ class SearchController extends Controller
         try {
             $query = $request->input('query');
             $type = $request->input('type');
+            $dateFrom = $request->input('date_from');
+            $dateTo = $request->input('date_to');
             
             $eventsQuery = Event::with(['eventType', 'artist']);
             
+            // Фильтр по поисковому запросу
             if ($query) {
                 $eventsQuery->where(function($q) use ($query) {
                     $q->where('name', 'like', "%{$query}%")
@@ -63,16 +67,37 @@ class SearchController extends Controller
                 });
             }
             
+            // Фильтр по типу события
             if ($type) {
                 $eventsQuery->whereHas('eventType', function($q) use ($type) {
                     $q->where('name', $type);
                 });
             }
             
-            $events = $eventsQuery->get();
+            // Фильтр по дате
+            if ($dateFrom || $dateTo) {
+                $eventsQuery->where(function($q) use ($dateFrom, $dateTo) {
+                    if ($dateFrom && $dateTo) {
+                        // Диапазон дат
+                        $q->whereBetween('event_date', [
+                            Carbon::parse($dateFrom)->startOfDay(),
+                            Carbon::parse($dateTo)->endOfDay()
+                        ]);
+                    } elseif ($dateFrom) {
+                        // От даты
+                        $q->where('event_date', '>=', Carbon::parse($dateFrom)->startOfDay());
+                    } elseif ($dateTo) {
+                        // До даты
+                        $q->where('event_date', '<=', Carbon::parse($dateTo)->endOfDay());
+                    }
+                });
+            }
+            
+            $events = $eventsQuery->orderBy('event_date', 'asc')->get();
             
             return response()->json([
-                'events' => $events
+                'events' => $events,
+                'total' => $events->count()
             ]);
         } catch (\Exception $e) {
             Log::error('Error in search API: ' . $e->getMessage());

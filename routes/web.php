@@ -89,3 +89,6 @@ Route::get('/api/events', function() {
 
 // Обновленный маршрут для получения событий слайдера
 Route::get('/api/slider-events', [SearchController::class, 'getSliderEvents'])->name('api.slider-events');
+
+// Новый API маршрут для поиска с фильтрами
+Route::get('/api/search-events', [SearchController::class, 'search'])->name('api.search-events');

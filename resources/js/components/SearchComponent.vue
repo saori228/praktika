@@ -12,35 +12,100 @@
         </form>
       </div>
       
-      <div class="categories flex space-x-4 md:space-x-12 mb-6 md:mb-8 overflow-x-auto pb-2">
-        <button 
-          @click="filterByType(null)" 
-          :class="{ 'font-bold': activeType === null }"
-          class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
-        >
-          Все
-        </button>
-        <button 
-          @click="filterByType('concert')" 
-          :class="{ 'font-bold': activeType === 'concert' }"
-          class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
-        >
-          Концерты
-        </button>
-        <button 
-          @click="filterByType('theater')" 
-          :class="{ 'font-bold': activeType === 'theater' }"
-          class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
-        >
-          Театры
-        </button>
-        <button 
-          @click="filterByType('movie')" 
-          :class="{ 'font-bold': activeType === 'movie' }"
-          class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
-        >
-          Кинофильмы
-        </button>
+      <!-- Фильтры -->
+      <div class="filters mb-6 md:mb-8">
+        <!-- Фильтр по типу -->
+        <div class="categories flex space-x-4 md:space-x-12 mb-4 md:mb-6 overflow-x-auto pb-2">
+          <button 
+            @click="filterByType(null)" 
+            :class="{ 'font-bold': activeType === null }"
+            class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
+          >
+            Все
+          </button>
+          <button 
+            @click="filterByType('concert')" 
+            :class="{ 'font-bold': activeType === 'concert' }"
+            class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
+          >
+            Концерты
+          </button>
+          <button 
+            @click="filterByType('theater')" 
+            :class="{ 'font-bold': activeType === 'theater' }"
+            class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
+          >
+            Театры
+          </button>
+          <button 
+            @click="filterByType('movie')" 
+            :class="{ 'font-bold': activeType === 'movie' }"
+            class="text-base md:text-xl whitespace-nowrap hover:text-blue-600 transition-colors"
+          >
+            Кинофильмы
+          </button>
+        </div>
+        
+        <!-- Фильтр по дате -->
+        <div class="date-filters bg-white p-4 rounded-lg shadow-md">
+          <h3 class="text-lg font-semibold mb-3">Фильтр по дате</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label for="date-from" class="block text-sm font-medium text-gray-700 mb-1">С даты</label>
+              <input 
+                type="date" 
+                id="date-from"
+                v-model="dateFrom" 
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                @change="validateDates"
+              >
+            </div>
+            <div>
+              <label for="date-to" class="block text-sm font-medium text-gray-700 mb-1">По дату</label>
+              <input 
+                type="date" 
+                id="date-to"
+                v-model="dateTo" 
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                @change="validateDates"
+              >
+            </div>
+            <div class="flex gap-2">
+              <button 
+                @click="clearDateFilter" 
+                class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Очистить
+              </button>
+              <button 
+                @click="setTodayFilter" 
+                class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Сегодня
+              </button>
+              <button 
+                @click="setWeekFilter" 
+                class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Неделя
+              </button>
+            </div>
+          </div>
+          <div v-if="dateError" class="mt-2 text-red-600 text-sm">
+            {{ dateError }}
+          </div>
+          <div v-if="dateFrom || dateTo" class="mt-2 text-sm text-gray-600">
+            <span v-if="dateFrom && dateTo">
+              Показаны события с {{ formatDisplayDate(dateFrom) }} по {{ formatDisplayDate(dateTo) }}
+            </span>
+            <span v-else-if="dateFrom">
+              Показаны события с {{ formatDisplayDate(dateFrom) }}
+            </span>
+            <span v-else-if="dateTo">
+              Показаны события до {{ formatDisplayDate(dateTo) }}
+            </span>
+          </div>
+        </div>
       </div>
       
       <div class="search-slider mb-8 md:mb-12" v-if="sliderEvents.length > 0">
@@ -89,7 +154,12 @@
         </div>
       </div>
       
-      <h2 class="text-xl md:text-2xl font-bold mb-4 md:mb-6">События от STADIUM</h2>
+      <div class="results-header flex justify-between items-center mb-4 md:mb-6">
+        <h2 class="text-xl md:text-2xl font-bold">События от STADIUM</h2>
+        <div class="text-sm text-gray-600">
+          Найдено: {{ filteredEvents.length }} {{ getEventsWord(filteredEvents.length) }}
+        </div>
+      </div>
       
       <div v-if="filteredEvents.length > 0" class="events-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
         <a 
@@ -109,6 +179,9 @@
       
       <div v-else class="text-center py-8 md:py-12">
         <p class="text-lg md:text-xl text-gray-500">Мероприятия не найдены</p>
+        <p v-if="hasActiveFilters" class="text-sm text-gray-400 mt-2">
+          Попробуйте изменить фильтры поиска
+        </p>
       </div>
     </div>
   </div>
@@ -134,6 +207,9 @@ export default {
     return {
       searchQuery: '',
       activeType: null,
+      dateFrom: '',
+      dateTo: '',
+      dateError: '',
       events: [],
       sliderEvents: [],
       currentSlideIndex: 0,
@@ -146,6 +222,7 @@ export default {
     filteredEvents() {
       let result = this.events;
       
+      // Фильтр по поисковому запросу
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase();
         result = result.filter(event => 
@@ -154,16 +231,41 @@ export default {
         );
       }
       
+      // Фильтр по типу события
       if (this.activeType) {
         result = result.filter(event => 
           event.event_type && event.event_type.name === this.activeType
         );
       }
       
+      // Фильтр по дате
+      if (this.dateFrom || this.dateTo) {
+        result = result.filter(event => {
+          if (!event.event_date) return false;
+          
+          const eventDate = new Date(event.event_date);
+          const fromDate = this.dateFrom ? new Date(this.dateFrom) : null;
+          const toDate = this.dateTo ? new Date(this.dateTo + 'T23:59:59') : null; // Включаем весь день
+          
+          if (fromDate && toDate) {
+            return eventDate >= fromDate && eventDate <= toDate;
+          } else if (fromDate) {
+            return eventDate >= fromDate;
+          } else if (toDate) {
+            return eventDate <= toDate;
+          }
+          
+          return true;
+        });
+      }
+      
       return result;
     },
     currentSliderEvent() {
       return this.sliderEvents[this.currentSlideIndex] || {};
+    },
+    hasActiveFilters() {
+      return this.searchQuery || this.activeType || this.dateFrom || this.dateTo;
     }
   },
   methods: {
@@ -172,6 +274,59 @@ export default {
     },
     filterByType(type) {
       this.activeType = type;
+    },
+    validateDates() {
+      this.dateError = '';
+      
+      if (this.dateFrom && this.dateTo) {
+        const fromDate = new Date(this.dateFrom);
+        const toDate = new Date(this.dateTo);
+        
+        if (fromDate > toDate) {
+          this.dateError = 'Дата "С" не может быть позже даты "По"';
+          return false;
+        }
+      }
+      
+      return true;
+    },
+    clearDateFilter() {
+      this.dateFrom = '';
+      this.dateTo = '';
+      this.dateError = '';
+    },
+    setTodayFilter() {
+      const today = new Date().toISOString().split('T')[0];
+      this.dateFrom = today;
+      this.dateTo = today;
+      this.dateError = '';
+    },
+    setWeekFilter() {
+      const today = new Date();
+      const nextWeek = new Date();
+      nextWeek.setDate(today.getDate() + 7);
+      
+      this.dateFrom = today.toISOString().split('T')[0];
+      this.dateTo = nextWeek.toISOString().split('T')[0];
+      this.dateError = '';
+    },
+    formatDisplayDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ru-RU', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    },
+    getEventsWord(count) {
+      if (count % 10 === 1 && count % 100 !== 11) {
+        return 'событие';
+      } else if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) {
+        return 'события';
+      } else {
+        return 'событий';
+      }
     },
     nextSlide() {
       if (this.sliderEvents.length === 0) return;
@@ -194,7 +349,13 @@ export default {
     formatDate(dateString) {
       if (!dateString) return '';
       const date = new Date(dateString);
-      return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      return date.toLocaleDateString('ru-RU', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     },
     getSliderImageByEvent(event) {
       if (!event) return '/images/slider/slide-default.jpg';
@@ -212,7 +373,7 @@ export default {
       return '/images/slider/slide-default.jpg';
     },
     getEventImage(event) {
-      // ГЛАВНОЕ ИЗМЕНЕНИЕ: Сначала проверяем image_path из базы данных
+      // Используем image_path из базы данных
       if (event.image_path) {
         return event.image_path;
       }
@@ -233,7 +394,6 @@ export default {
       } else if (event.name.includes('ОЧИ')) {
         return '/images/events/movie.jpg';
       } else if (event.event_type) {
-        // Fallback изображения по типу события
         if (event.event_type.name === 'concert') {
           return '/images/events/concert-default.jpg';
         } else if (event.event_type.name === 'theater') {
@@ -378,5 +538,17 @@ export default {
 
 .slider-indicator:hover {
   background-color: rgba(255, 255, 255, 0.8);
+}
+
+.date-filters {
+  border: 1px solid #e5e7eb;
+}
+
+.event-card {
+  transition: transform 0.2s;
+}
+
+.event-card:hover {
+  transform: translateY(-2px);
 }
 </style>
